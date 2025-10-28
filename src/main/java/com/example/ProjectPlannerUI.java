@@ -12,6 +12,7 @@ public class ProjectPlannerUI extends JFrame {
     private JTable taskTable = new JTable(taskModel);
     private JTable resourceTable = new JTable(resourceModel);
     private JTextArea analysisArea = new JTextArea(8,60);
+
     private GanttPanel gantt = new GanttPanel(project);
     public ProjectPlannerUI(){
         setTitle("Project Planner");
@@ -38,11 +39,15 @@ public class ProjectPlannerUI extends JFrame {
         JPanel lower = new JPanel(new BorderLayout());
         lower.add(new JScrollPane(analysisArea), BorderLayout.CENTER);
         lower.add(gantt, BorderLayout.SOUTH);
+        gantt.setVisible(false);
+        analysisArea.setVisible(false);
         split.setBottomComponent(lower);
         split.setDividerLocation(220);
         add(split, BorderLayout.CENTER);
-        newBtn.addActionListener(e->{ project.clear(); refreshAll(); });
-        closeBtn.addActionListener(e->dispose());
+        newBtn.addActionListener(e->{ project.clear(); refreshAll();
+            JOptionPane.showMessageDialog(this, "All Data Cleared Successfully!");});
+        closeBtn.addActionListener(e->{dispose();
+            JOptionPane.showMessageDialog(this, "Project closed successfully!");});
         uploadTasks.addActionListener(e->{
             JFileChooser fc = new JFileChooser();
             if(fc.showOpenDialog(this)==JFileChooser.APPROVE_OPTION){
@@ -53,6 +58,22 @@ public class ProjectPlannerUI extends JFrame {
                 }catch(Exception ex){ JOptionPane.showMessageDialog(this,ex.getMessage()); }
             }
         });
+        saveBtn.addActionListener(e -> {
+            JFileChooser fc = new JFileChooser();
+            fc.setDialogTitle("Select folder to save project files");
+            fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+            if (fc.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+                try {
+                    String folder = fc.getSelectedFile().getAbsolutePath();
+                    ProjectParser.saveTasks(project, folder + "/tasks_saved.txt");
+                    ProjectParser.saveResources(project, folder + "/resources_saved.txt");
+                    JOptionPane.showMessageDialog(this, "Project saved successfully!");
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "Error saving files: " + ex.getMessage());
+                }
+            }
+        });
+
         uploadResources.addActionListener(e->{
             JFileChooser fc = new JFileChooser();
             if(fc.showOpenDialog(this)==JFileChooser.APPROVE_OPTION){
@@ -64,7 +85,7 @@ public class ProjectPlannerUI extends JFrame {
             }
         });
         analyzeBtn.addActionListener(e->doAnalyze());
-        visualizeBtn.addActionListener(e->{ gantt.setProject(project); gantt.repaint(); });
+        visualizeBtn.addActionListener(e->{ gantt.setProject(project); gantt.repaint();gantt.setVisible(true);analysisArea.setVisible(false); });
         setSize(1100,700);
         setLocationRelativeTo(null);
         setVisible(true);
@@ -75,6 +96,8 @@ public class ProjectPlannerUI extends JFrame {
         analysisArea.setText("");
         gantt.setProject(project);
         gantt.repaint();
+        gantt.setVisible(false);
+        analysisArea.setVisible(false);
     }
     private void doAnalyze(){
         StringBuilder sb = new StringBuilder();
@@ -105,7 +128,13 @@ public class ProjectPlannerUI extends JFrame {
         var efforts = project.totalEffortPerResourceHours();
         if(efforts.isEmpty()) sb.append("No resources\n");
         else for(var en: efforts.entrySet()) sb.append(en.getKey()).append(": ").append(String.format("%.2f",en.getValue())).append("\n");
+        analysisArea.setSize(1100,100);
+        analysisArea.setVisible(true);
         analysisArea.setText(sb.toString());
+        analysisArea.setLineWrap(true);
+        analysisArea.setWrapStyleWord(true);
+        gantt.setVisible(false);
+
     }
     public static void main(String[] args){
         SwingUtilities.invokeLater(ProjectPlannerUI::new);

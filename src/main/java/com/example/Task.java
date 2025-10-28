@@ -36,4 +36,12 @@ public class Task {
         LocalDateTime minEnd = a2.isBefore(b2)? a2: b2;
         return maxStart.isBefore(minEnd);
     }
+    public String getStartFormatted() {
+        return start.toString().replace("T", "+");
+    }
+
+    public String getEndFormatted() {
+        return end.toString().replace("T", "+");
+    }
+
 }
