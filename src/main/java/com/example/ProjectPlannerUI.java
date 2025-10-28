@@ -99,43 +99,65 @@ public class ProjectPlannerUI extends JFrame {
         gantt.setVisible(false);
         analysisArea.setVisible(false);
     }
-    private void doAnalyze(){
+    private void doAnalyze() {
         StringBuilder sb = new StringBuilder();
         sb.append("Project start: ").append(project.projectStart()).append("\n");
         sb.append("Project end: ").append(project.projectEnd()).append("\n");
         long mins = project.projectDurationMinutes();
-        long days = mins/(60*24);
-        long hours = (mins%(60*24))/60;
-        long rem = mins%60;
+        long days = mins / (60 * 24);
+        long hours = (mins % (60 * 24)) / 60;
+        long rem = mins % 60;
         sb.append("Duration: ").append(days).append(" days, ").append(hours).append(" hours, ").append(rem).append(" minutes\n\n");
-        sb.append("Overlapping tasks:\n");
-        var overlaps = project.findOverlaps();
-        if(overlaps.isEmpty()) sb.append("None\n");
-        else for(String s: overlaps) sb.append(s).append("\n");
-        sb.append("\nTeams per task:\n");
-        for(Task t: project.getAllTasks()){
-            var team = project.teamForTask(t.getId());
-            sb.append("Task ").append(t.getId()).append(": ");
-            if(team.isEmpty()) sb.append("No resources\n"); else {
-                for(int i=0;i<team.size();i++){
-                    sb.append(team.get(i).getName());
-                    if(i<team.size()-1) sb.append(", ");
+
+        // Check for dependency cycles
+        List<List<Integer>> cycles = project.findCycles();
+
+        if (!cycles.isEmpty()) {
+            sb.append("⚠Dependency cycle detected!\n");
+            for (List<Integer> cycle : cycles) {
+                sb.append("Cycle: ");
+                for (int i = 0; i < cycle.size(); i++) {
+                    sb.append("Task ").append(cycle.get(i));
+                    if (i < cycle.size() - 1) sb.append(" → ");
                 }
                 sb.append("\n");
             }
+            sb.append("\nTeams per task and total effort cannot be calculated due to dependency cycle.\n");
+        } else {
+            sb.append("Overlapping tasks:\n");
+            var overlaps = project.findOverlaps();
+            if (overlaps.isEmpty()) sb.append("None\n");
+            else for (String s : overlaps) sb.append(s).append("\n");
+
+            sb.append("\nTeams per task:\n");
+            for (Task t : project.getAllTasks()) {
+                var team = project.teamForTask(t.getId());
+                sb.append("Task ").append(t.getId()).append(": ");
+                if (team.isEmpty()) sb.append("No resources\n");
+                else {
+                    for (int i = 0; i < team.size(); i++) {
+                        sb.append(team.get(i).getName());
+                        if (i < team.size() - 1) sb.append(", ");
+                    }
+                    sb.append("\n");
+                }
+            }
+
+            sb.append("\nTotal effort per resource (hours):\n");
+            var efforts = project.totalEffortPerResourceHours();
+            if (efforts.isEmpty()) sb.append("No resources\n");
+            else for (var en : efforts.entrySet())
+                sb.append(en.getKey()).append(": ").append(String.format("%.2f", en.getValue())).append("\n");
         }
-        sb.append("\nTotal effort per resource (hours):\n");
-        var efforts = project.totalEffortPerResourceHours();
-        if(efforts.isEmpty()) sb.append("No resources\n");
-        else for(var en: efforts.entrySet()) sb.append(en.getKey()).append(": ").append(String.format("%.2f",en.getValue())).append("\n");
-        analysisArea.setSize(1100,100);
+
+        analysisArea.setSize(1100, 100);
         analysisArea.setVisible(true);
         analysisArea.setText(sb.toString());
         analysisArea.setLineWrap(true);
         analysisArea.setWrapStyleWord(true);
         gantt.setVisible(false);
-
     }
+
     public static void main(String[] args){
         SwingUtilities.invokeLater(ProjectPlannerUI::new);
     }
